@@ -112,6 +112,7 @@ curl -s http://localhost:8888/api/spotify | jq
 - `getaddrinfo ENOTFOUND ws.audioscrobbler.com` — нет доступа в интернет или DNS.
 - `LASTFM_API_KEY` / `LASTFM_USERNAME` не заданы — сервер будет отвечать `isActive=false` и/или логировать ошибки запроса.
 - `Request failed with status code 403` — Last.fm отклонил запрос (проверьте ключ/юзера и попробуйте задать `LASTFM_USER_AGENT`).
+- Если на Vercel приходят пустые поля (`title=""`, `artist=""`) — часто это значит, что Last.fm вернул не JSON (например HTML/страницу блокировки). Проверь `Functions Logs` и попробуй открыть `GET /api/spotify?debug=1` (в ответе появятся `errorMessage/errorDetails`).
 
 ## PM2 (автозапуск + ежедневный рестарт)
 
