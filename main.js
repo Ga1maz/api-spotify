@@ -1,6 +1,6 @@
 import express from "express";
-import axios from "axios";
 import "dotenv/config";
+import { fetchCurrentlyPlaying, getDefaultUserAgent } from "./lib/lastfm.js";
 
 const app = express();
 
@@ -8,6 +8,7 @@ const LASTFM_API_KEY = process.env.LASTFM_API_KEY;
 const LASTFM_USERNAME = process.env.LASTFM_USERNAME;
 const PORT = process.env.PORT || 8888;
 const DEVICE_NAME = process.env.DEVICE_NAME || "Unknown Device";
+const LASTFM_USER_AGENT = process.env.LASTFM_USER_AGENT || getDefaultUserAgent();
 
 let cache = { isActive: false, track: null };
 
@@ -17,68 +18,37 @@ app.use((req, res, next) => {
   next();
 });
 
-async function fetchCurrentlyPlaying() {
-  const recentRes = await axios.get("https://ws.audioscrobbler.com/2.0/", {
-    params: {
-      method: "user.getrecenttracks",
-      user: LASTFM_USERNAME,
-      api_key: LASTFM_API_KEY,
-      format: "json",
-      limit: 1,
-      extended: 1,
-    },
-    timeout: 5000,
-  });
-
-  const tracks = recentRes.data.recenttracks?.track;
-  if (!tracks || tracks.length === 0) {
-    return { isActive: false, track: null };
-  }
-
-  const track = Array.isArray(tracks) ? tracks[0] : tracks;
-  const isNowPlaying = track["@attr"]?.nowplaying === "true";
-
-  if (!isNowPlaying) {
-    const playedAt = track.date?.uts ? Number(track.date.uts) : null;
-    const now = Math.floor(Date.now() / 1000);
-    if (!playedAt || now - playedAt > 600) {
-      return { isActive: false, track: null };
-    }
-  }
-
-  const title = track.name;
-  const artist = track.artist?.name || track.artist?.["#text"] || "";
-  const album = track.album?.["#text"] || "";
-  const cover =
-    track.image?.find((i) => i.size === "extralarge")?.["#text"] ||
-    track.image?.find((i) => i.size === "large")?.["#text"] ||
-    "";
-  const spotifyUrl = `https://open.spotify.com/search/${artist} ${title}`.replace(/ /g, "%20");
-
-  return {
-    isActive: true,
-    nowPlaying: isNowPlaying,
-    cover,
-    title,
-    artist,
-    album,
-    spotifyUrl,
-    device: DEVICE_NAME,
-  };
-}
-
 async function startPolling() {
+  let nextDelayMs = 2000;
   try {
-    const fresh = await fetchCurrentlyPlaying();
+    const fresh = await fetchCurrentlyPlaying({
+      apiKey: LASTFM_API_KEY,
+      username: LASTFM_USERNAME,
+      deviceName: DEVICE_NAME,
+      userAgent: LASTFM_USER_AGENT,
+    });
     const changed =
       fresh.isActive !== cache.isActive ||
       fresh.title !== cache.title ||
       fresh.artist !== cache.artist;
     if (changed) cache = fresh;
   } catch (e) {
-    console.error("Server error:", e.message);
+    nextDelayMs = 10000;
+    const status = e?.response?.status;
+    const data = e?.response?.data;
+    if (status) {
+      console.error(
+        "Server error:",
+        `Last.fm responded ${status}`,
+        typeof data === "string" ? data : JSON.stringify(data)
+      );
+    } else if (e?.lastfm) {
+      console.error("Server error:", "Last.fm error", JSON.stringify(e.lastfm));
+    } else {
+      console.error("Server error:", e?.message || String(e));
+    }
   }
-  setTimeout(startPolling, 2000);
+  setTimeout(startPolling, nextDelayMs);
 }
 
 app.get("/api/spotify", (req, res) => {

@@ -140,3 +140,23 @@ pm2 restart spotify-playing
 pm2 stop spotify-playing
 pm2 delete spotify-playing
 ```
+
+## Vercel
+
+Важный момент: Vercel — это serverless. Там нельзя держать “вечный” Express‑сервер с `setTimeout`/polling как в `main.js`.
+Для Vercel в репозитории есть serverless‑эндпоинт `api/spotify.js`, который ходит в Last.fm на каждый запрос.
+
+### Переменные окружения
+
+На Vercel `.env` из репозитория не используется. Добавьте переменные в Project Settings → Environment Variables:
+
+- `LASTFM_API_KEY`
+- `LASTFM_USERNAME`
+- `DEVICE_NAME` (опционально)
+- `LASTFM_USER_AGENT` (опционально)
+
+### URL
+
+После деплоя дергайте:
+
+- `https://<your-project>.vercel.app/api/spotify`
