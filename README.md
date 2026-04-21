@@ -23,6 +23,8 @@ LASTFM_API_KEY=*************
 LASTFM_USERNAME=your_username
 PORT=8888
 DEVICE_NAME=My Device
+LASTFM_USER_AGENT=spotify-playing/0.1.0 (+https://github.com/Ga1maz/api-spotify)
+LASTFM_ACTIVE_WINDOW_SECONDS=600
 ```
 
 Где:
@@ -30,6 +32,8 @@ DEVICE_NAME=My Device
 - `LASTFM_USERNAME` — ваш логин на Last.fm
 - `PORT` — порт сервера (по умолчанию `8888`)
 - `DEVICE_NAME` — как будет называться устройство в ответе API
+- `LASTFM_USER_AGENT` — User-Agent для запросов к Last.fm (иногда помогает избежать блокировок/403)
+- `LASTFM_ACTIVE_WINDOW_SECONDS` — окно (в секундах), в течение которого последний скроббл считается “активностью” (по умолчанию `600`)
 
 ## Запуск
 
@@ -51,15 +55,25 @@ npm run dev
 
 ### `GET /api/spotify`
 
-Возвращает кэш последнего результата опроса.
+Возвращает данные по последнему треку из Last.fm и флаг активности.
 
-- Если сейчас ничего не играет (и последний скроббл старше ~10 минут), ответ будет:
+- `isActive=true`, если `nowPlaying=true` или последний скроббл был в пределах `LASTFM_ACTIVE_WINDOW_SECONDS`.
 
 ```json
-{ "isActive": false, "track": null }
+{
+  "isActive": false,
+  "nowPlaying": false,
+  "cover": "",
+  "title": "",
+  "artist": "",
+  "album": "",
+  "spotifyUrl": "",
+  "device": "My Device",
+  "playedAt": null
+}
 ```
 
-- Если что-то играет сейчас или играло совсем недавно, ответ будет примерно таким:
+Если трек есть, поля (`title`, `artist`, …) будут заполнены даже когда `isActive=false`.
 
 ```json
 {
@@ -70,16 +84,18 @@ npm run dev
   "artist": "Artist",
   "album": "Album",
   "spotifyUrl": "https://open.spotify.com/search/Artist%20Song",
-  "device": "My Device"
+  "device": "My Device",
+  "playedAt": 1712345678
 }
 ```
 
 Поля:
-- `isActive` — есть “активность” (now playing или трек был сыгран за последние ~10 минут)
+- `isActive` — есть “активность” (now playing или скроббл в пределах окна)
 - `nowPlaying` — `true`, если Last.fm пометил трек как “сейчас играет”
 - `cover` — ссылка на обложку (если есть в данных Last.fm)
 - `spotifyUrl` — ссылка на поиск по Spotify (генерируется из `artist` + `title`)
 - `device` — значение из `DEVICE_NAME`
+- `playedAt` — unix-время последнего скроббла (или `null`)
 
 ## Примеры
 
@@ -95,6 +111,7 @@ curl -s http://localhost:8888/api/spotify | jq
 
 - `getaddrinfo ENOTFOUND ws.audioscrobbler.com` — нет доступа в интернет или DNS.
 - `LASTFM_API_KEY` / `LASTFM_USERNAME` не заданы — сервер будет отвечать `isActive=false` и/или логировать ошибки запроса.
+- `Request failed with status code 403` — Last.fm отклонил запрос (проверьте ключ/юзера и попробуйте задать `LASTFM_USER_AGENT`).
 
 ## PM2 (автозапуск + ежедневный рестарт)
 

@@ -4,6 +4,12 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store, max-age=0, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Vercel-CDN-Cache-Control", "no-store");
+  res.setHeader("CDN-Cache-Control", "no-store");
+  if (typeof res.removeHeader === "function") res.removeHeader("ETag");
 
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -23,9 +29,7 @@ export default async function handler(req, res) {
       userAgent: process.env.LASTFM_USER_AGENT || getDefaultUserAgent(),
     });
 
-    // Под Vercel лучше не кэшировать надолго, чтобы трек обновлялся быстро.
-    res.setHeader("Cache-Control", "no-store");
-    res.status(200).json(data);
+    res.status(200).json({ ...data, fetchedAt: new Date().toISOString() });
   } catch (e) {
     const status = e?.response?.status;
     const data = e?.response?.data;
@@ -34,8 +38,18 @@ export default async function handler(req, res) {
       status ? `Last.fm responded ${status}` : e?.message || String(e),
       status ? (typeof data === "string" ? data : JSON.stringify(data)) : ""
     );
-    res.setHeader("Cache-Control", "no-store");
-    res.status(502).json({ isActive: false, track: null, error: "Last.fm error" });
+    res.status(502).json({
+      isActive: false,
+      nowPlaying: false,
+      cover: "",
+      title: "",
+      artist: "",
+      album: "",
+      spotifyUrl: "",
+      device: process.env.DEVICE_NAME || "Unknown Device",
+      playedAt: null,
+      error: "Last.fm error",
+      fetchedAt: new Date().toISOString(),
+    });
   }
 }
-

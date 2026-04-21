@@ -10,7 +10,17 @@ const PORT = process.env.PORT || 8888;
 const DEVICE_NAME = process.env.DEVICE_NAME || "Unknown Device";
 const LASTFM_USER_AGENT = process.env.LASTFM_USER_AGENT || getDefaultUserAgent();
 
-let cache = { isActive: false, track: null };
+let cache = {
+  isActive: false,
+  nowPlaying: false,
+  cover: "",
+  title: "",
+  artist: "",
+  album: "",
+  spotifyUrl: "",
+  device: DEVICE_NAME,
+  playedAt: null,
+};
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
