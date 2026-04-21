@@ -10,6 +10,9 @@ module.exports = {
       autorestart: true,
       watch: false,
       time: true,
+
+      env_file: ".env",
+
       cron_restart: "0 4 * * *",
 
       env: {
@@ -18,4 +21,3 @@ module.exports = {
     },
   ],
 };
-
