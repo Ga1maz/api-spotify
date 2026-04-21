@@ -21,6 +21,8 @@ export default async function handler(req, res) {
     return;
   }
 
+  const debug = req.query?.debug === "1";
+
   try {
     const data = await fetchCurrentlyPlaying({
       apiKey: process.env.LASTFM_API_KEY,
@@ -38,6 +40,7 @@ export default async function handler(req, res) {
       status ? `Last.fm responded ${status}` : e?.message || String(e),
       status ? (typeof data === "string" ? data : JSON.stringify(data)) : ""
     );
+    if (e?.lastfm) console.error("Vercel error details:", JSON.stringify(e.lastfm));
     res.status(502).json({
       isActive: false,
       nowPlaying: false,
@@ -49,6 +52,12 @@ export default async function handler(req, res) {
       device: process.env.DEVICE_NAME || "Unknown Device",
       playedAt: null,
       error: "Last.fm error",
+      ...(debug
+        ? {
+            errorMessage: e?.message || String(e),
+            errorDetails: e?.lastfm || null,
+          }
+        : null),
       fetchedAt: new Date().toISOString(),
     });
   }

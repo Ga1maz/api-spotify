@@ -20,6 +20,7 @@ let cache = {
   spotifyUrl: "",
   device: DEVICE_NAME,
   playedAt: null,
+  fetchedAt: null,
 };
 
 app.use((req, res, next) => {
@@ -41,7 +42,7 @@ async function startPolling() {
       fresh.isActive !== cache.isActive ||
       fresh.title !== cache.title ||
       fresh.artist !== cache.artist;
-    if (changed) cache = fresh;
+    cache = changed ? { ...fresh, fetchedAt: new Date().toISOString() } : { ...cache, fetchedAt: new Date().toISOString() };
   } catch (e) {
     nextDelayMs = 10000;
     const status = e?.response?.status;
