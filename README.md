@@ -95,3 +95,46 @@ curl -s http://localhost:8888/api/spotify | jq
 
 - `getaddrinfo ENOTFOUND ws.audioscrobbler.com` — нет доступа в интернет или DNS.
 - `LASTFM_API_KEY` / `LASTFM_USERNAME` не заданы — сервер будет отвечать `isActive=false` и/или логировать ошибки запроса.
+
+## PM2 (автозапуск + ежедневный рестарт)
+
+Ниже пример для сервера, где проект лежит в `/var/www/api-spotify` и рядом есть `.env`.
+
+### 1) Установить PM2
+
+```bash
+npm i -g pm2
+```
+
+### 2) Запустить приложение через ecosystem
+
+В репозитории уже есть `ecosystem.config.cjs` (по умолчанию рестарт каждый день в 04:00).
+
+```bash
+cd /var/www/api-spotify
+pm2 start ecosystem.config.cjs
+pm2 status
+```
+
+Изменить время ежедневного рестарта можно в `ecosystem.config.cjs` через `cron_restart`.
+
+### 3) Включить автозапуск после перезагрузки сервера
+
+```bash
+pm2 startup
+```
+
+Команда выведет строку, которую нужно выполнить (обычно это `sudo ...` для systemd). После этого:
+
+```bash
+pm2 save
+```
+
+### Полезные команды
+
+```bash
+pm2 logs spotify-playing
+pm2 restart spotify-playing
+pm2 stop spotify-playing
+pm2 delete spotify-playing
+```
